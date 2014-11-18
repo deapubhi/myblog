@@ -1,43 +1,44 @@
+#FROM dockerfile/nodejs
+#MAINTAINER Aman Prakash Mohla <aman@tablehero.com>
+
+
 FROM ubuntu:14.04
 
 MAINTAINER Aman Prakash Mohla <aman@tablehero.com>
 
-# =========> SETUP DEPENDENCIES <===========
-RUN apt-get update
-RUN apt-get upgrade -y
-RUN apt-get -y install build-essential --fix-missing
-RUN apt-get -y install software-properties-common
-RUN apt-get -y install python-software-properties 
-RUN apt-get -y install git git-core
+#Install Dependencies
 
-RUN apt-get -y install byobu
-RUN apt-get -y install curl 
-RUN apt-get -y install htop
-RUN apt-get -y install man unzip vim
-
-RUN apt-get -y install wget
-RUN apt-get -y install make
-
-# =========> SETUP NODEJS <===========
+RUN apt-get update -y 
+RUN apt-get install -y python-software-properties g++ make software-properties-common
 RUN add-apt-repository ppa:chris-lea/node.js
-RUN apt-get update
-RUN apt-get -y install nodejs
+RUN echo "deb http://archive.ubuntu.com/ubuntu precise universe" >> /etc/apt/sources.list
+RUN apt-get update -y
+
+#Install nodejs and unzip
+RUN apt-get install -y nodejs
+
+WORKDIR /home/myblog
 
 RUN npm install -g grunt-cli
 RUN npm install -g bower
-RUN npm install -g pm2
 
-WORKDIR /home/blog
-ADD package.json /home/blog/package.json
-ADD .bowerrc /home/blog/.bowerrc
-ADD bower.json /home/blog/bower.json
-
-
+# Install packages
+ADD package.json /home/myblog/package.json
 RUN npm install
-RUN bower install --config.interactive=false --allow-root
 
-ADD . /home/blog
+
+# Make everything available for start
+ADD . /home/myblog
 
 ENV NODE_ENV production
 EXPOSE 2368
-CMD[pm2 node index.js]
+
+RUN pwd
+
+# =========> SETUP SUPERVISOR CONFIGURATION <===========
+RUN apt-get -y install supervisor
+RUN mkdir -p /var/log/supervisor
+RUN mkdir -p /home/myblog/logs/supervisor
+ADD supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+CMD ["/usr/bin/supervisord"]
